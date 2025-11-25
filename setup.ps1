@@ -27,3 +27,31 @@ Expand-Archive -Path $whkdZip -DestinationPath $whkdUnzip -Force
 # Move files to WindowsApps
 Get-ChildItem $komorebiUnzip -File | Copy-Item -Destination $pathDir -Force
 Get-ChildItem $whkdUnzip -File | Copy-Item -Destination $pathDir -Force
+
+# Base config directory
+$configBase = Join-Path $env:USERPROFILE ".config"
+
+# Komorebi config directory
+$komorebiConfigDir = Join-Path $configBase "komorebi"
+if (-not (Test-Path $komorebiConfigDir)) {
+    New-Item -ItemType Directory -Path $komorebiConfigDir | Out-Null
+}
+
+# WHKD config directory
+$whkdConfigDir = Join-Path $configBase "whkd"
+if (-not (Test-Path $whkdConfigDir)) {
+    New-Item -ItemType Directory -Path $whkdConfigDir | Out-Null
+}
+
+# Export environment variables pointing to these directories
+[System.Environment]::SetEnvironmentVariable("KOMOREBI_CONFIG_HOME", $komorebiConfigDir, "User")
+[System.Environment]::SetEnvironmentVariable("WHKD_CONFIG_HOME", $whkdConfigDir, "User")
+
+$scriptDir = $PSScriptRoot
+
+# Copy komorebi default config
+Copy-Item -Path (Join-Path $scriptDir "komorebi\*") -Destination $komorebiConfigDir -Recurse -Force
+
+# Copy whkd default config
+Copy-Item -Path (Join-Path $scriptDir "whkd\*") -Destination $whkdConfigDir -Recurse -Force
+
