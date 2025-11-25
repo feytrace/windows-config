@@ -3,9 +3,9 @@
   "app_specific_configuration_path": "$Env:USERPROFILE/.config/komorebi/applications.json",
   "window_hiding_behaviour": "Cloak",
   "cross_monitor_move_behaviour": "Insert",
-  "default_workspace_padding": 10,
-  "default_container_padding": 10,
-  "border": true,
+  "default_workspace_padding": 5,
+  "default_container_padding": 5,
+  "border": false,
   "border_width": 8,
   "border_offset": -1,
   "theme": {
