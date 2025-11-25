@@ -1,35 +1,49 @@
-# Releases
-$komorebiRelease = "https://github.com/LGUG2Z/komorebi/releases/download/v0.1.38/komorebi-0.1.38-x86_64-pc-windows-msvc.zip"
-$whkdRelease = "https://github.com/LGUG2Z/whkd/releases/download/v0.2.10/whkd-0.2.10-x86_64-pc-windows-msvc.zip"
+# ===============================
+# Komorebi + WHKD Installer Script
+# ===============================
 
-# User Directories
-$userDir = $env:USERPROFILE
-$pathDir = Join-Path $userDir "AppData\Local\Microsoft\WindowsApps"
+# --- Releases ---
+$komorebiRelease = "https://github.com/LGUG2Z/komorebi/releases/download/v0.1.38/komorebi-0.1.38-x86_64-pc-windows-msvc.zip"
+$whkdRelease     = "https://github.com/LGUG2Z/whkd/releases/download/v0.2.10/whkd-0.2.10-x86_64-pc-windows-msvc.zip"
+
+# --- User Directories ---
+$userDir     = $env:USERPROFILE
+$pathDir     = Join-Path $userDir "AppData\Local\Microsoft\WindowsApps"
 $downloadDir = Join-Path $userDir "Downloads"
 
-# Ensure Downloads exists
+# Ensure Downloads folder exists
 if (-not (Test-Path $downloadDir)) { New-Item -ItemType Directory -Path $downloadDir | Out-Null }
 
-# Downloaded file paths
+# --- Downloaded file paths ---
 $komorebiZip = Join-Path $downloadDir "komorebi.zip"
-$whkdZip = Join-Path $downloadDir "whkd.zip"
-$komorebiUnzip = [System.IO.Path]::ChangeExtension($komorebiZip, $null)
-$whkdUnzip = [System.IO.Path]::ChangeExtension($whkdZip, $null)
+$whkdZip     = Join-Path $downloadDir "whkd.zip"
 
-# Download files
+$komorebiUnzip = [System.IO.Path]::ChangeExtension($komorebiZip, $null)
+$whkdUnzip     = [System.IO.Path]::ChangeExtension($whkdZip, $null)
+
+# --- Download files ---
+Write-Host "Downloading komorebi..."
 Invoke-WebRequest -Uri $komorebiRelease -OutFile $komorebiZip
+
+Write-Host "Downloading whkd..."
 Invoke-WebRequest -Uri $whkdRelease -OutFile $whkdZip
 
-# Extract archives
+# --- Extract archives ---
+Write-Host "Extracting komorebi..."
 Expand-Archive -Path $komorebiZip -DestinationPath $komorebiUnzip -Force
+
+Write-Host "Extracting whkd..."
 Expand-Archive -Path $whkdZip -DestinationPath $whkdUnzip -Force
 
-# Move files to WindowsApps
+# --- Move files to WindowsApps ---
+Write-Host "Copying komorebi files to WindowsApps..."
 Get-ChildItem $komorebiUnzip -File | Copy-Item -Destination $pathDir -Force
+
+Write-Host "Copying whkd files to WindowsApps..."
 Get-ChildItem $whkdUnzip -File | Copy-Item -Destination $pathDir -Force
 
-# Base config directory
-$configBase = Join-Path $env:USERPROFILE ".config"
+# --- Base config directory ---
+$configBase = Join-Path $userDir ".config"
 
 # Komorebi config directory
 $komorebiConfigDir = Join-Path $configBase "komorebi"
@@ -43,15 +57,44 @@ if (-not (Test-Path $whkdConfigDir)) {
     New-Item -ItemType Directory -Path $whkdConfigDir | Out-Null
 }
 
-# Export environment variables pointing to these directories
+# --- Export environment variables ---
 [System.Environment]::SetEnvironmentVariable("KOMOREBI_CONFIG_HOME", $komorebiConfigDir, "User")
 [System.Environment]::SetEnvironmentVariable("WHKD_CONFIG_HOME", $whkdConfigDir, "User")
 
+# --- Copy default configs from script directory ---
 $scriptDir = $PSScriptRoot
 
-# Copy komorebi default config
-Copy-Item -Path (Join-Path $scriptDir "komorebi\*") -Destination $komorebiConfigDir -Recurse -Force
+if (Test-Path (Join-Path $scriptDir "komorebi")) {
+    Write-Host "Copying default komorebi configs..."
+    Copy-Item -Path (Join-Path $scriptDir "komorebi\*") -Destination $komorebiConfigDir -Recurse -Force
+}
 
-# Copy whkd default config
-Copy-Item -Path (Join-Path $scriptDir "whkd\*") -Destination $whkdConfigDir -Recurse -Force
+if (Test-Path (Join-Path $scriptDir "whkd")) {
+    Write-Host "Copying default whkd configs..."
+    Copy-Item -Path (Join-Path $scriptDir "whkd\*") -Destination $whkdConfigDir -Recurse -Force
+}
 
+# --- Startup Applications ---
+$startupFolder = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Startup"
+$WshShell = New-Object -ComObject WScript.Shell
+
+# Executable paths
+$komorebiExe = Join-Path $pathDir "komorebic.exe"
+$whkdExe     = Join-Path $pathDir "whkd.exe"
+
+# Shortcut paths
+$komorebiShortcut = Join-Path $startupFolder "komorebi.lnk"
+$whkdShortcut     = Join-Path $startupFolder "whkd.lnk"
+
+# Create komorebi shortcut with config argument
+$shortcut = $WshShell.CreateShortcut($komorebiShortcut)
+$shortcut.TargetPath = $komorebiExe
+$shortcut.Arguments  = "start --config `"$komorebiConfigDir\komorebi.json`""
+$shortcut.Save()
+
+# Create whkd shortcut
+$shortcut = $WshShell.CreateShortcut($whkdShortcut)
+$shortcut.TargetPath = $whkdExe
+$shortcut.Save()
+
+Write-Host "`nInstallation complete! Komorebi and WHKD will start automatically on login."
